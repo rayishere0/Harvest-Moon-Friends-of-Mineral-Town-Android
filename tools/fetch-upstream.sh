@@ -10,7 +10,7 @@
 # The user's ROM and BIOS are NEVER fetched by this script.
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 THIRD_PARTY="$ROOT/third_party"
 mkdir -p "$THIRD_PARTY"
 

@@ -29,13 +29,13 @@ default_region = "usa"
 name              = "Harvest Moon: Friends of Mineral Town (USA)"
 id                = "FOMT"
 load_address      = 0x08000000
-size              = 0x01000000
+size              = 0x00800000
 entry_pc          = 0x08000000
 static_resume_all = true
 
 [identity]
 sha1 = "a2fc3574f0a65a4fcf7682fb274b9d7eebdef963"
-# md5 = ""  # STAMPED by tools/regen.sh step 2 — computed from your ROM.
+md5  = "80355c831a7a25b0f70dc021ebd344f1"
 # fomt.sha1 carries only the SHA-1, so the md5 cannot be derived from
 # the decomp. It is a cross-check only: gba_recompile verifies the
 # binary size + SHA-1, not the md5.
