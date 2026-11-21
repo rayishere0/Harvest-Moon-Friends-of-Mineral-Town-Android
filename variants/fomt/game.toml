@@ -1,0 +1,118 @@
+# game.toml — Harvest Moon: Friends of Mineral Town (USA), native Android port.
+#
+# Consumed by gba_recompile: [program], [identity], and the [[...]] hint
+# arrays below. The [game] / [rom] / [bios] / [save] / [recompiler]
+# tables are read by the game shell / runtime, not by gba_recompile
+# (see the notes inline). Hand-authored; no tool ever writes this file
+# except the md5 stamp in tools/regen.sh step 2. Pipeline:
+# docs/PROBE.md §9. Schema: gbarecomp docs/TOML_SCHEMA.md.
+
+[game]
+name           = "Harvest Moon: Friends of Mineral Town"
+short_name     = "fomt"
+default_region = "usa"
+
+# ── Recompiler program table ─────────────────────────────────────────
+#
+# Cartridge maps at 0x08000000, 16 MiB (FoMT USA is 16,777,216 bytes;
+# gba_recompile aborts if the file on disk is any other size).
+# entry_pc is the discovery seed: the header branch at 0x08000000.
+# static_resume_all stays on: IRQ/SWI returns may resume at any
+# instruction boundary, and strict-static coverage depends on it
+# (gbarecomp docs/TOML_SCHEMA.md; docs/PROBE.md §4).
+# aot_scan_start/end are deliberately OMITTED: a hand-bounded range
+# risks decoding assets as code, and the decomp boundaries (once
+# `make compare` passes) are the authoritative code/data split
+# instead (Wario Land 4 precedent). codegen_shards is omitted too:
+# the recompiler picks an adaptive count (WL4 got 16).
+[program]
+name              = "Harvest Moon: Friends of Mineral Town (USA)"
+id                = "FOMT"
+load_address      = 0x08000000
+size              = 0x01000000
+entry_pc          = 0x08000000
+static_resume_all = true
+
+[identity]
+sha1 = "a2fc3574f0a65a4fcf7682fb274b9d7eebdef963"
+# md5 = ""  # STAMPED by tools/regen.sh step 2 — computed from your ROM.
+# fomt.sha1 carries only the SHA-1, so the md5 cannot be derived from
+# the decomp. It is a cross-check only: gba_recompile verifies the
+# binary size + SHA-1, not the md5.
+
+# ── ROM identity (runtime) ───────────────────────────────────────────
+#
+# rom = the user's own dump (never in this repo). The path is relative
+# to this file: repo-root/third_party/fomt/baserom.gba, where
+# tools/regen.sh step 3 copies it for the decomp build. No crc32 here:
+# it is stamped into src/fomt_rom_identity.h by tools/regen.sh step 2
+# (Wario Land 4 pattern); a crc32 of 0 means "no CRC check" downstream.
+[rom]
+path = "../../third_party/fomt/baserom.gba"
+sha1 = "a2fc3574f0a65a4fcf7682fb274b9d7eebdef963"
+
+# ── BIOS identity (runtime) ──────────────────────────────────────────
+#
+# The GBA BIOS is real, executed code. The runner refuses to launch
+# without a hash-verified BIOS dump (gbarecomp: "BIOS is sacred").
+# sha1 is the standard retail GBA BIOS hash.
+[bios]
+path = "../../bios/gba_bios.bin"
+sha1 = "300c20df6731a33952ded8c436f7f186d25d3492"
+
+# ── Recompiler entry & layout ────────────────────────────────────────
+#
+# DOCUMENTARY — gba_recompile does NOT consume this table (verified
+# against tools/gba_recompile/config.cpp at pinned gbarecomp f23317f:
+# there is no at_path("recompiler") anywhere in it). Strictness is
+# enforced at runtime with GBARECOMP_STRICT_STATIC=1, not by `strict`
+# here. These paths are the ones tools/regen.sh uses, and the future
+# desktop/Android shell reads them too.
+[recompiler]
+entry_point = "0x08000000"
+seeds       = "variants/fomt/symbols/imported_symbols.tsv"
+boundaries  = "variants/fomt/symbols/function_boundaries.tsv"
+out_dir     = "variants/fomt/generated"
+strict      = true
+
+# ── Save chip ────────────────────────────────────────────────────────
+#
+# FoMT uses 32 KiB SRAM: 2 slots x (0x3FEC + 0x28) fits 32 KiB exactly
+# (docs/PROBE.md §5). The slot count (2 vs 3) is the open pin carried
+# over from the earlier probe — if a third slot ever surfaces, this
+# size changes with it.
+[save]
+type = "sram"
+size = 32768
+
+# ── Function table (dispatch hints) ──────────────────────────────────
+#
+# Starts EMPTY on purpose. There are no proven FoMT hints yet: the
+# finder plus (once `make compare` passes) the imported decomp symbols
+# provide the seeds, and the strict-static abort log names each
+# missing PC for the next [[extra_func]] / [[jump_table]] /
+# [[data_range]]. Do NOT invent addresses here — a wrong entry
+# generates junk code, while a missing function is a loud, fixable
+# dispatch miss (gbarecomp docs/TOML_SCHEMA.md, "false-positive
+# policy").
+#
+# KNOWN RISKS — noted here only; decided by the first translation
+# run's abort log, never by this file:
+#
+# 1. SRAM stack-copy routines. FoMT copies its SRAM read/write/verify
+#    routines to the STACK (0x80/0xC0 bytes) and executes them there
+#    (asm/code_lib_sram.s, func_080D379C/080D3800/080D3870). A stack
+#    address cannot be pre-declared via [[code_copy]] — that mechanism
+#    is for FIXED RAM addresses only. The likely fix is a small
+#    per-game patch (replace the stack-copy call with a direct call to
+#    the recompiled function, Wario Land 4 tweak style) or HLE at the
+#    bus level. If the strict-static run aborts on a stack PC, that is
+#    the signal. Do not guess a [[code_copy]] entry for it.
+#
+# 2. m4a SoundMainRam overlay. The MP2K mixer is copied to RAM and
+#    executed there (the standard m4a pattern; the [[code_copy]] +
+#    [[extra_func]] pair is the documented way to declare it). But its
+#    runtime_start / source_start / size are FoMT-specific and are NOT
+#    the Wario Land 4 values — they can only be written once the
+#    translation run (or decomp symbols) proves the FoMT addresses.
+#    Leave absent until observed.
