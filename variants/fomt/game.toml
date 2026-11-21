@@ -93,14 +93,14 @@ size = 32768
 
 # ── Function table (dispatch hints) ──────────────────────────────────
 #
-# Starts EMPTY on purpose. There are no proven FoMT hints yet: the
-# finder plus (once `make compare` passes) the imported decomp symbols
-# provide the seeds, and the strict-static abort log names each
-# missing PC for the next [[extra_func]] / [[jump_table]] /
-# [[data_range]]. Do NOT invent addresses here — a wrong entry
-# generates junk code, while a missing function is a loud, fixable
-# dispatch miss (gbarecomp docs/TOML_SCHEMA.md, "false-positive
-# policy").
+# The first proven hint is below (strict-static abort log, 2026-11-21:
+# pc=0x03000A1C, the .iwram wait routine). The finder plus (once
+# `make compare` passes) the imported decomp symbols provide the
+# seeds, and each further strict-static abort names the next missing
+# PC for another [[extra_func]] / [[jump_table]] / [[data_range]].
+# Do NOT invent addresses here — a wrong entry generates junk code,
+# while a missing function is a loud, fixable dispatch miss
+# (gbarecomp docs/TOML_SCHEMA.md, "false-positive policy").
 #
 # KNOWN RISKS — noted here only; decided by the first translation
 # run's abort log, never by this file:
@@ -122,3 +122,15 @@ size = 32768
 #    the Wario Land 4 values — they can only be written once the
 #    translation run (or decomp symbols) proves the FoMT addresses.
 #    Leave absent until observed.
+
+[[code_copy]]
+runtime_start = 0x03000490
+source_start  = 0x0875B9F8
+size          = 0x00000848
+name          = "iwram_blob"
+note          = "FoMT .iwram code blob (asm/code_iwram.s; fomt.lds .iwram): copied ROM->IWRAM at boot by crt0. Covers the IRQ dispatcher, IRQ handler, and the IntrWait-style wait routine. Source = ROM file offset 0x75B9F8; cross-check 0x0875B9F8 + 0x848 = 0x0875C240 (fomt.lds .pad anchor)."
+
+[[extra_func]]
+addr = 0x03000A1C
+mode = "arm"
+note = "func_03000A1C: IntrWait-style wait routine in the .iwram blob; first genuine strict-static miss after the BIOS fix. Also seeds the code_copy prologue scan for the rest of the blob."
