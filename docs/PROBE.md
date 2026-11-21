@@ -273,10 +273,12 @@ from the earlier probe.
    HBlank poll), so low risk; re-check if the translation run shows a
    one-line offset in any effect.
 6. **Generated-code scale.** WL4 (8 MiB ROM): 4.86M lines / 196 MB in
-   16 shards, 32,804 functions. FoMT's ROM is 16 MiB — expect
-   proportionally larger generated output and longer builds; cap native
-   compile jobs (`-PgbaNativeJobs=2` on a 4 GB machine), 16 KB page
-   alignment for Android 15+.
+   16 shards, 32,804 functions. **CORRECTION 2026-11-21: FoMT's ROM is
+   8 MiB (0x00800000), not 16 MiB as assumed here** — the first real
+   translation run proved it (1,107 functions discovered, 2 shards
+   emitted). Generated-code scale will be WL4-scale, not ~2x WL4; cap
+   native compile jobs (`-PgbaNativeJobs=2` on a 4 GB machine) and 16 KB
+   page alignment for Android 15+ still stand.
 7. **BIOS dump still required** even with HLE on (no-BIOS tier
    deferred). The Android setup flow must ask the player for their BIOS
    dump, as the existing builds do. The earlier probe's "no-BIOS"
@@ -551,8 +553,10 @@ against mGBA/NanoBoyAdvance for the raster-split and mosaic scenes.
 7. Save slot count (2 vs 3) — pin from title-screen callers before
    finalising `[save]` / `saveBytes` (carried over from the earlier
    probe; 2 slots = 0x7FF8 fits 32 KiB exactly).
-8. Generated-code scale for a 16 MiB ROM (WL4's 8 MiB → 4.86M lines /
-   196 MB) and the build machine's memory/time budget.
+8. Generated-code scale — **settled by the first translation run
+   (2026-11-21): FoMT's ROM is 8 MiB, 1,107 functions discovered, 2
+   shards emitted** (WL4-scale output, not ~2x). The build machine's
+   memory/time budget follows WL4's caps.
 
 ## 11. Evidence index
 

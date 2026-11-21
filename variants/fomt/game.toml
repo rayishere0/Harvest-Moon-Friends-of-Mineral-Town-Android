@@ -14,8 +14,14 @@ default_region = "usa"
 
 # ── Recompiler program table ─────────────────────────────────────────
 #
-# Cartridge maps at 0x08000000, 16 MiB (FoMT USA is 16,777,216 bytes;
+# Cartridge maps at 0x08000000, 8 MiB (FoMT USA is 8,388,608 bytes;
 # gba_recompile aborts if the file on disk is any other size).
+# CORRECTION 2026-11-21: the probe assumed 16 MiB, but the first real
+# translation run proved the ROM is 8 MiB (0x00800000) — gba_recompile
+# accepted it and emitted 2 shards for 1,107 functions. The probe's
+# "~2x WL4 generated-code scale" estimate was wrong with it; expect
+# WL4-scale output, not double. (Size + md5 were fixed on main by Ray's
+# "Fix" commit 0a00c824; this comment was the stale remainder.)
 # entry_pc is the discovery seed: the header branch at 0x08000000.
 # static_resume_all stays on: IRQ/SWI returns may resume at any
 # instruction boundary, and strict-static coverage depends on it

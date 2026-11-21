@@ -61,6 +61,17 @@ Full record: `docs/PROBE.md` (this directory's probe write-up).
 2. `tools/regen.sh --rom <your ROM>` — ROM gate → stamp identity →
    decomp build + md5 (if step 0 passed) → symbol import → `gba_recompile`
    → `variants/fomt/generated/`.
-3. Desktop build + strict-static run (see `docs/PROBE.md` §9) until
-   `COVERAGE: FULLY_STATIC` on a representative playthrough.
+3. Desktop build + strict-static run (see `docs/PROBE.md` §9):
+   ```
+   cmake -S . -B build-desktop -DCMAKE_BUILD_TYPE=Release
+   cmake --build build-desktop -j4
+   GBARECOMP_STRICT_STATIC=1 ./build-desktop/FoMTRecomp --no-window --frames 3600
+   ```
+   Pass prints `self_heal_coverage=FULLY_STATIC`; a miss prints
+   `NOT_STATIC` and writes `recomp_master_misses_A4NE.toml.frag` with
+   the missing PCs — add them as `[[extra_func]]` / `[[jump_table]]`
+   hints in `variants/fomt/game.toml`, re-run `tools/regen.sh`, rebuild,
+   re-run. Run from the repo root (game.toml paths resolve relative to
+   the TOML file). SDL2 is optional for the headless run; install it
+   for a window (MSYS2: `mingw-w64-x86_64-SDL2`).
 4. Android APK via `android/app/build.gradle` (see `docs/PROBE.md` §7).
