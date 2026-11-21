@@ -138,4 +138,10 @@ note = "func_03000A1C: IntrWait-style wait routine in the .iwram blob; first gen
 [[extra_func]]
 addr = 0x080D19C0
 mode = "thumb"
-note = "RealClear64byte (src/m4a_1.s:551): m4a 64-byte clear helper (movs r1-r4,0; 4x stm r0!,{r1-r4}); the 0x080D19CC miss is its 2nd stm (+0xC), an interior IRQ-resume PC. Finder never discovered it - no direct callers in the decomp (only the extern decl in src/m4a.c:16); the m4a engine reaches it via a path the static finder cannot follow. Rooting it here also gives static_resume_all=true resume aliases for every interior instruction, including 0x080D19CC."
+note = "RealClear64byte (src/m4a_1.s:551): m4a 64-byte clear helper (movs r1-r4,0; 4x stm r0!,{r1-r4}); the 0x080D19CC miss is its 2nd stm (+0xC), an interior IRQ-resume PC. Finder never discovered it - no direct callers in the decomp (only the extern decl in src/m4a.c:16); the m4a engine reaches it via a path the static finder cannot follow. UPDATE 2026-11-22: rooting the entry alone did NOT cover 0x080D19CC — the post-merge run still missed at the same PC, so the [[resume_range]] below carries the interior coverage explicitly."
+
+[[resume_range]]
+start = 0x080D19C0
+end   = 0x080D19D6
+mode  = "thumb"
+note  = "RealClear64byte (src/m4a_1.s:551), 0x080D19C0-0x080D19D6 (11 thumb insns, 0x16 bytes): m4a 64-byte clear helper. The 0x080D19CC miss is its 2nd stm (+0xC), an interior IRQ-resume PC; rooting the entry (PR #4, merged) did not cover it, so declare the whole function as a resume range — every interior instruction is seeded as an explicit alias candidate and rolled into the host, independent of the static_resume_all loop. Also covers future IRQ landings at any other interior PC (0x080D19CA / 0x080D19CE / ...) without one resume=true entry per timing."
