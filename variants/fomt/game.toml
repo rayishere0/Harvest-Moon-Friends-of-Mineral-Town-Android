@@ -134,3 +134,8 @@ note          = "FoMT .iwram code blob (asm/code_iwram.s; fomt.lds .iwram): copi
 addr = 0x03000A1C
 mode = "arm"
 note = "func_03000A1C: IntrWait-style wait routine in the .iwram blob; first genuine strict-static miss after the BIOS fix. Also seeds the code_copy prologue scan for the rest of the blob."
+
+[[extra_func]]
+addr = 0x080D19C0
+mode = "thumb"
+note = "RealClear64byte (src/m4a_1.s:551): m4a 64-byte clear helper (movs r1-r4,0; 4x stm r0!,{r1-r4}); the 0x080D19CC miss is its 2nd stm (+0xC), an interior IRQ-resume PC. Finder never discovered it - no direct callers in the decomp (only the extern decl in src/m4a.c:16); the m4a engine reaches it via a path the static finder cannot follow. Rooting it here also gives static_resume_all=true resume aliases for every interior instruction, including 0x080D19CC."
