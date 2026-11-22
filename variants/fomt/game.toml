@@ -133,7 +133,12 @@ note          = "FoMT .iwram code blob (asm/code_iwram.s; fomt.lds .iwram): copi
 [[extra_func]]
 addr = 0x03000A1C
 mode = "arm"
-note = "func_03000A1C: IntrWait-style wait routine in the .iwram blob; first genuine strict-static miss after the BIOS fix. Also seeds the code_copy prologue scan for the rest of the blob."
+note = "func_03000A1C: IntrWait-style wait routine in the .iwram blob; first genuine strict-static miss after the BIOS fix. UPDATE 2026-11-22: the prologue scan does NOT seed the rest of the blob — it only fires on STMFD-push entries, so func_03000958 (IRQ handler, no push entry) missed anyway and gets its own [[extra_func]] below."
+
+[[extra_func]]
+addr = 0x03000958
+mode = "arm"
+note = "func_03000958 (asm/code_iwram.s:36-40): the game's IRQ handler in the .iwram blob, 0x03000958-0x03000A1C (0xC4 bytes); installed at the BIOS IRQ vector slot 0x03007FFC by func_080004C4 at boot, so it runs on every interrupt. The 0x03000958 miss is its ENTRY — the PR #3 auto-seed claim did not hold: collect_code_copy_seeds() (gbarecomp src/recompile/function_finder.cpp:717-800) only seeds ARM addresses whose first instruction is an STMFD push (or mov ip,sp + push), and this handler does not open with one. The [[code_copy]] already maps its bytes (source 0x0875BEC0), so the explicit entry seed is enough; no resume_range (entry, not interior)."
 
 [[extra_func]]
 addr = 0x080D19C0
