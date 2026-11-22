@@ -199,6 +199,11 @@ addr = 0x080093AC
 mode = "thumb"
 note = "func_080093AC (asm/hardware.s): PPU mosaic/fade logic. It is reached via indirect call from an unrecognized vtable pointer."
 
+[[extra_func]]
+addr = 0x080094AC
+mode = "thumb"
+note = "func_080094AC (asm/hardware.s): virtual method reached via an indirect call from an unrecognized vtable pointer."
+
 [[resume_range]]
 start = 0x080095FC
 end   = 0x08009638
