@@ -152,10 +152,10 @@ mode  = "thumb"
 note  = "RealClear64byte (src/m4a_1.s:551), 0x080D19C0-0x080D19D6 (11 thumb insns, 0x16 bytes): m4a 64-byte clear helper. The 0x080D19CC miss is its 2nd stm (+0xC), an interior IRQ-resume PC; rooting the entry (PR #4, merged) did not cover it, so declare the whole function as a resume range — every interior instruction is seeded as an explicit alias candidate and rolled into the host, independent of the static_resume_all loop. Also covers future IRQ landings at any other interior PC (0x080D19CA / 0x080D19CE / ...) without one resume=true entry per timing."
 
 [[resume_range]]
-start = 0x080D12EC
+start = 0x080D1204
 end   = 0x080D1498
 mode  = "thumb"
-note  = "sub_080D12EC and sub_080D139C (asm/code_809E804.s), 0x080D12EC-0x080D1498: type-2 and type-3 decoder loops of the Unpack decompressor. Contains indirect calls `mov lr, pc; bx sb` at 0x080D1376 and 0x080D13AE, whose return addresses (0x080D137A and 0x080D13B0) are missed by the static finder due to walk truncation at unconditional branches. Covering both functions in one contiguous resume_range handles all return PCs and interior IRQ landings."
+note  = "sub_080D1204, sub_080D12EC, and sub_080D139C (asm/code_809E804.s), 0x080D1204-0x080D1498: type-1, type-2, and type-3 decoder loops of the Unpack decompressor. Contains indirect calls `mov lr, pc; bx sb` at 0x080D127A, 0x080D1376, and 0x080D13AE, whose return addresses (0x080D1280, 0x080D137A, and 0x080D13B0) are missed by the static finder due to walk truncation at unconditional branches. Covering the entire decoder block in one contiguous resume_range handles all return PCs and interior IRQ landings."
 
 [[extra_func]]
 addr = 0x08009908
