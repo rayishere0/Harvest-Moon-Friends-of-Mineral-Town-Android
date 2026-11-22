@@ -153,9 +153,9 @@ note  = "RealClear64byte (src/m4a_1.s:551), 0x080D19C0-0x080D19D6 (11 thumb insn
 
 [[resume_range]]
 start = 0x080D12EC
-end   = 0x080D139C
+end   = 0x080D1498
 mode  = "thumb"
-note  = "sub_080D12EC (asm/code_809E804.s), 0x080D12EC-0x080D139C (0xB0 bytes): type-2 decoder loop of the Unpack decompressor, called directly once from Unpack (0x080D109A); Unpack is called from 16+ sites. The 0x080D137A miss is the return address of the indirect output call `mov lr, pc; bx sb` at 0x080D1376-0x080D1378 (sb = the output function Unpack selected: func_080D116A/116E/117E). The finder never seeds it: its walk of sub_080D12EC stops at the first unconditional `b .L080D145C` (end 0x080D1322), and the `blo .L080D1376` target walks as its own 2-instruction root ending at 0x080D137A (exclusive), so static_resume_all covers only 0x080D1378; `mov lr, pc` is a PC read, not a PC write, so the constant tracker never records lr and the bx-site return tracking never fires. The bytes at 0x080D137A are real Thumb code (adds/lsls/bmi/strh/mov/cmp/bcc/pop/bx), rendered as .byte by the decomp tool because they follow an unconditional bx — the finder decodes ROM bytes, so a standalone seed there translates fine. The range also pre-covers the sibling return 0x080D1362 (first `bx sb` at 0x080D135C) and every other interior PC."
+note  = "sub_080D12EC and sub_080D139C (asm/code_809E804.s), 0x080D12EC-0x080D1498: type-2 and type-3 decoder loops of the Unpack decompressor. Contains indirect calls `mov lr, pc; bx sb` at 0x080D1376 and 0x080D13AE, whose return addresses (0x080D137A and 0x080D13B0) are missed by the static finder due to walk truncation at unconditional branches. Covering both functions in one contiguous resume_range handles all return PCs and interior IRQ landings."
 
 [[extra_func]]
 addr = 0x08009908
