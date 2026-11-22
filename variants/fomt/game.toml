@@ -97,7 +97,12 @@ size = 32768
 # pc=0x03000A1C, the .iwram wait routine). The finder plus (once
 # `make compare` passes) the imported decomp symbols provide the
 # seeds, and each further strict-static abort names the next missing
-# PC for another [[extra_func]] / [[jump_table]] / [[data_range]].
+# PC for another [[extra_func]] / [[extra_func]]
+addr = 0x0800374C
+mode = "thumb"
+note = "func_0800374C (asm/intro_scene.s): intro scene setup/update logic. It is a virtual method reached via an indirect call (_call_via_r2 in func_0800371C) from a vtable pointer in vtable_unk_080E5A18."
+
+[[jump_table]] / [[data_range]].
 # Do NOT invent addresses here — a wrong entry generates junk code,
 # while a missing function is a loud, fixable dispatch miss
 # (gbarecomp docs/TOML_SCHEMA.md, "false-positive policy").
@@ -175,6 +180,11 @@ note = "func_08008B18 (asm/hardware.s:2526): thin thumb wrapper around m4aSoundM
 addr = 0x0805E760
 mode = "thumb"
 note = "func_0805E760 (asm/code_0803EE94.s:59553): indexed table-entry resolver in the event/script dispatcher file, 0x0805E760-0x0805E790 (0x30 bytes, 24 thumb insns): out->ptr = (entry[index].u16[1] << 2) + table[0x1C], out->id = entry[index].u16[0], zeros when index >= table[0x20] count; sibling func_0805E790 is the 16-byte-entry variant. The 0x0805E760 miss is its ENTRY. Finder never discovered it: exactly one caller in the whole decomp, func_0807865C (bl at code_0803EE94.s:113910), and that caller is itself undiscovered — its only caller is func_080DB1E4 (asm/code_linkonce.s:14385), which has no direct callers and no literal-pool reference anywhere in the tree (it news up a vtable'd object and invokes a method via _call_via_r2, so it is reached only via an indirect call / stored function pointer). The break is the undiscovered root, not a walk truncation: func_0807865C's walk from its entry has no unconditional branch before the bl at 113910. Entry, not interior, so no resume_range (static_resume_all covers interior PCs once rooted)."
+
+[[extra_func]]
+addr = 0x0800374C
+mode = "thumb"
+note = "func_0800374C (asm/intro_scene.s): intro scene setup/update logic. It is a virtual method reached via an indirect call (_call_via_r2 in func_0800371C) from a vtable pointer in vtable_unk_080E5A18."
 
 [[jump_table]]
 addr = 0x08139A88
