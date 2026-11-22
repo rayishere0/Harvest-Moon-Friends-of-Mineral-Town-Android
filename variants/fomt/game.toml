@@ -204,6 +204,11 @@ addr = 0x080094AC
 mode = "thumb"
 note = "func_080094AC (asm/hardware.s): virtual method reached via an indirect call from an unrecognized vtable pointer."
 
+[[extra_func]]
+addr = 0x080094B8
+mode = "thumb"
+note = "func_080094B8 (asm/hardware.s): virtual method reached via an indirect call from an unrecognized vtable pointer in vtable_unk_080E5B80."
+
 [[resume_range]]
 start = 0x080095FC
 end   = 0x08009638
