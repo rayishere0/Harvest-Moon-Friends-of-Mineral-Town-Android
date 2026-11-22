@@ -155,7 +155,7 @@ note  = "RealClear64byte (src/m4a_1.s:551), 0x080D19C0-0x080D19D6 (11 thumb insn
 start = 0x080D1204
 end   = 0x080D1498
 mode  = "thumb"
-note  = "sub_080D1204, sub_080D12EC, and sub_080D139C (asm/code_809E804.s), 0x080D1204-0x080D1498: type-1, type-2, and type-3 decoder loops of the Unpack decompressor. Contains indirect calls `mov lr, pc; bx sb` at 0x080D127A, 0x080D1376, and 0x080D13AE, whose return addresses (0x080D1280, 0x080D137A, and 0x080D13B0) are missed by the static finder due to walk truncation at unconditional branches. Covering the entire decoder block in one contiguous resume_range handles all return PCs and interior IRQ landings."
+note  = "sub_080D1204, sub_080D12EC, and sub_080D139C (asm/code_809E804.s), 0x080D1204-0x080D1498: type-1, type-2, and type-3 decoder loops of the Unpack decompressor. Contains indirect calls `mov lr, pc; bx sb` at 0x080D127C, 0x080D1376, and 0x080D13AC, whose return addresses (0x080D1280, 0x080D137A, and 0x080D13B0) are missed by the static finder due to walk truncation at unconditional branches. Covering the entire decoder block in one contiguous resume_range handles all return PCs and interior IRQ landings."
 
 [[extra_func]]
 addr = 0x08009908
@@ -179,7 +179,7 @@ note = "func_0805E760 (asm/code_0803EE94.s:59553): indexed table-entry resolver 
 [[extra_func]]
 addr = 0x0800374C
 mode = "thumb"
-note = "func_0800374C (asm/intro_scene.s): intro scene setup/update logic. It is a virtual method reached via an indirect call (_call_via_r2 in func_0800371C) from a vtable pointer in vtable_unk_080E5A18."
+note = "func_0800374C (asm/intro_scene.s:5457): intro scene setup/update logic — calls func_08000D64, then _call_via_r2 on a sub-object. No direct callers anywhere in the decomp; reached via indirect call (mechanism unpinned). Note: the _call_via_r2 in func_0800371C goes through the [r4,#4]→[+4] member chain, NOT vtable_unk_080E5A18 (which this function installs into [r4]); whether 0x0800374D sits in a vtable is uncheckable — all vtables in asm/vtables.s are raw .incbin blobs."
 
 [[jump_table]]
 addr = 0x08139A88
@@ -192,28 +192,28 @@ note = "gMPlayJumpTableTemplate (fomt.lds): m4a music player sequence handlers. 
 [[extra_func]]
 addr = 0x08000D64
 mode = "thumb"
-note = "func_08000D64 (asm/intro_scene.s): virtual function reached via an indirect call (_call_via_r2 in func_0800371C). The pointer lives in vtable_unk_080E5A18, an unrecognized vtable blob in asm/vtables.s."
+note = "func_08000D64 (asm/intro_scene.s:445): scene-state dispatcher (switches on [r5+0x6D28], calls func_08000E1C / func_08000FF8), 0x08000D64-0x08000E1C (0xB8 bytes). Its only caller in the whole decomp is a direct bl from func_0800374C (asm/intro_scene.s:5464) — missed because its sole caller is itself undiscovered, not via any _call_via_r2 or vtable."
 
 [[extra_func]]
 addr = 0x080093AC
 mode = "thumb"
-note = "func_080093AC (asm/hardware.s): PPU mosaic/fade logic. It is reached via indirect call from an unrecognized vtable pointer."
+note = "func_080093AC (asm/hardware.s:3542): PPU mosaic/fade logic — writes BLDCNT 0x04000050 (fade to white/black), BLDALPHA 0x04000054, MOSAIC 0x0400004C; 0x080093AC-0x080094A4. It has THREE direct callers (code_linkonce.s:13932, :25129, hardware.s:3697); missed because the caller chain traces up to an undiscovered direct-caller root (sub_080DA76C ← sub_080D8178 ← func_08012028 ← nothing) — not a vtable."
 
 [[extra_func]]
 addr = 0x080094AC
 mode = "thumb"
-note = "func_080094AC (asm/hardware.s): virtual method reached via an indirect call from an unrecognized vtable pointer."
+note = "func_080094AC (asm/hardware.s:3693): thin wrapper passing this+0xc (the fade/mosaic state struct) to func_080093AC; 0x080094AC-0x080094B8 (12 bytes). No direct callers anywhere in the decomp and no literal-pool reference; reached via indirect call (mechanism unpinned — no vtable named, and all vtables are raw .incbin blobs)."
 
 [[extra_func]]
 addr = 0x080094B8
 mode = "thumb"
-note = "func_080094B8 (asm/hardware.s): virtual method reached via an indirect call from an unrecognized vtable pointer in vtable_unk_080E5B80."
+note = "func_080094B8 (asm/hardware.s:3701): constructor/initialiser — installs vtable_unk_080E5B80 (str r0, [r4, #8], hardware.s:3711-3712), initialises the fade struct at +0xc via func_08009324, calls func_080098AC. It has EIGHT direct callers (code_0803EE94.s x5, new_game.s x3) — it installs the vtable, it is not reached through it."
 
 [[resume_range]]
 start = 0x080095FC
 end   = 0x08009638
 mode  = "thumb"
-note  = "func_080095FC (asm/hardware.s:3698): 0x080095FC-0x08009638 (0x3C bytes). Entry and interior misses (like 0x08009612 / 0x0800962A). Reached via indirect call."
+note  = "func_080095FC (asm/hardware.s:3814): 0x080095FC-0x08009638 (0x3C bytes). Entry and interior misses (like 0x08009612 / 0x0800962A). Reached via indirect call."
 
 [[extra_func]]
 addr = 0x080096F0
@@ -229,25 +229,20 @@ note = "func_08009864 (asm/hardware.s): called by func_080D781C, which was itsel
 start = 0x08009968
 end   = 0x08009984
 mode  = "thumb"
-note  = "func_08009968 (asm/hardware.s:4212): 0x08009968-0x08009984 (0x1C bytes). Reached via indirect call from an unrecognized vtable. The 0x0800997E miss was an interior IRQ resume."
+note  = "func_08009968 (asm/hardware.s:4240): list remove, 0x08009968-0x08009984 (0x1C bytes). The 0x0800997E miss was an interior IRQ resume. Its only direct caller is func_080095FC (hardware.s:3830) — it is 095FC that is indirectly reached, not 09968."
 
 [[extra_func]]
 addr = 0x080D780C
 mode = "thumb"
-note = "func_080D780C (asm/code_linkonce.s): small method likely stored in an unrecognized vtable."
+note = "func_080D780C (asm/code_linkonce.s:7739): 16-byte thunk — loads member +0xc, calls func_080096F0, returns 0; 0x080D780C-0x080D781C. No direct callers, no literal-pool reference; reached via indirect call (mechanism unpinned)."
 
 [[extra_func]]
 addr = 0x080D781C
 mode = "thumb"
-note = "func_080D781C (asm/code_linkonce.s): small method likely stored in an unrecognized vtable."
+note = "func_080D781C (asm/code_linkonce.s:7749): 16-byte thunk — loads member +0xc, calls func_08009864, returns 0; 0x080D781C-0x080D782C. No direct callers, no literal-pool reference; reached via indirect call (mechanism unpinned)."
 
 [[resume_range]]
 start = 0x080D782C
 end   = 0x080D7868
 mode  = "thumb"
 note  = "func_080D782C (asm/code_linkonce.s): 0x080D782C-0x080D7868 (0x3C bytes). Interior miss at 0x080D783C was bridged x416, an IRQ resume."
-
-[[extra_func]]
-addr = 0x0800374C
-mode = "thumb"
-note = "func_0800374C (asm/intro_scene.s): intro scene setup/update logic. It is a virtual method reached via an indirect call (_call_via_r2 in func_0800371C) from a vtable pointer in vtable_unk_080E5A18."
