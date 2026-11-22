@@ -97,12 +97,7 @@ size = 32768
 # pc=0x03000A1C, the .iwram wait routine). The finder plus (once
 # `make compare` passes) the imported decomp symbols provide the
 # seeds, and each further strict-static abort names the next missing
-# PC for another [[extra_func]] / [[extra_func]]
-addr = 0x0800374C
-mode = "thumb"
-note = "func_0800374C (asm/intro_scene.s): intro scene setup/update logic. It is a virtual method reached via an indirect call (_call_via_r2 in func_0800371C) from a vtable pointer in vtable_unk_080E5A18."
-
-[[jump_table]] / [[data_range]].
+# PC for another [[extra_func]] / [[jump_table]] / [[data_range]].
 # Do NOT invent addresses here — a wrong entry generates junk code,
 # while a missing function is a loud, fixable dispatch miss
 # (gbarecomp docs/TOML_SCHEMA.md, "false-positive policy").
@@ -241,3 +236,8 @@ start = 0x080D782C
 end   = 0x080D7868
 mode  = "thumb"
 note  = "func_080D782C (asm/code_linkonce.s): 0x080D782C-0x080D7868 (0x3C bytes). Interior miss at 0x080D783C was bridged x416, an IRQ resume."
+
+[[extra_func]]
+addr = 0x0800374C
+mode = "thumb"
+note = "func_0800374C (asm/intro_scene.s): intro scene setup/update logic. It is a virtual method reached via an indirect call (_call_via_r2 in func_0800371C) from a vtable pointer in vtable_unk_080E5A18."
