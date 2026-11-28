@@ -327,3 +327,106 @@ start = 0x080E0F94
 end   = 0x080E0FDC
 mode  = "thumb"
 note = "sub_080E0F94 (Cyphco src/sub_080E0F94.c): array/list processing, 0x080E0F94-0x080E0FDC (0x48 bytes) — reads a count, calls sub_080090A8 on a range, iterates 16-byte elements. FPS: the 0x080E0FCE miss (+0x3A, count 84) is an interior PC, a resume/return inside the function the finder walk never reached. Its entry is NOT in the miss list (already translated), so this is a pure interior-resume case — a resume_range covering the full function bounds is the fix."
+
+# Batch hints — FoMT gameplay lag, round 2 (hitch log + frag, 2026-11-28).
+# Ray merged PR #14 (name-screen crash fix) and is now IN the game world,
+# but gameplay is laggy/choppy: 18 host_window hitches of 106-238 ms at
+# frames 3297-3375, ~56-62 s into a ~62 s farm session (~3 hitches/sec;
+# a 60fps frame is 16.7 ms, so a 112-238 ms hitch drops 7-14 frames).
+# All 13 frag PCs are INTERIOR (none is a function entry), so the frag's
+# [[extra_func]] proposals are wrong for all of them. The correct hint is
+# [[resume_range]] from function start to function end (past the miss) —
+# the same shape round 1 used, and round 1's ranges are proven: NONE of
+# round 1's PCs reappears in this frag. None of the 13 PCs is covered by
+# the current variants/fomt/game.toml on main (verified 2026-11-28
+# against the 329-line file on main 121f0745, which already includes
+# PR #14). Append to variants/fomt/game.toml. Do NOT claim FULLY_STATIC
+# until the strict confirm passes after merge
+# (GBARECOMP_STRICT_STATIC=1, expect FULLY_STATIC).
+
+# --- THE HITCH FIX (the four hot functions) ---
+# 127+127+112+63 = 429 of the 440 total bridged hits in the session
+# (97.5%). Each bridge interprets the whole missed call subtree, so
+# these four — each bridged ~1-2x/sec during gameplay — are the
+# choppiness. Translating them removes the bridge for each; see
+# TRIAGE.md for the callee residual risk.
+
+[[resume_range]]
+start = 0x0804EF34
+end   = 0x0804EFC0
+mode  = "thumb"
+note = "sub_0804EF34 (Cyphco src/sub_0804EF34.c): fade/palette copier, 0x0804EF34-0x0804EFC0 (0x8C bytes) — with useMask it does a nibble-masked bulk copy (8 words/iter, masked/unmasked alternating); otherwise CpuSet/DMA via sub_080D3798. HOT: the 0x0804EFAC miss (+0x78, bridged x112) is deep inside the masked-copy loop. The hot code is inline (no callee), so translating this range covers it directly. The 0x0804EFAC miss is an interior PC, a resume/return inside the function the finder walk never reached. Covering the full function bounds as a resume_range."
+
+[[resume_range]]
+start = 0x0804F0F4
+end   = 0x0804F170
+mode  = "thumb"
+note = "sub_0804F0F4 (Cyphco src/sub_0804F0F4.c): sprite/object tile setup, 0x0804F0F4-0x0804F170 (0x7C bytes) — 3 outer x 7 inner = 21 iterations, each calling Fill4bppTiles and setting a flag, then resets object state. HOTTEST: the 0x0804F15C miss (+0x68, bridged x127) is in the epilogue after the tile loop. The bridge interprets the whole subtree including all 21 Fill4bppTiles calls — that is the hitch. The 0x0804F15C miss is an interior PC, a resume/return inside the function the finder walk never reached. Covering the full function bounds as a resume_range."
+
+[[resume_range]]
+start = 0x080A56A0
+end   = 0x080A570C
+mode  = "thumb"
+note = "sub_080A56A0 (Cyphco src/sub_080A56A0.c): DMA transfer setup for map tiles, 0x080A56A0-0x080A570C (0x6C bytes) — loops 3 slots, and for each non-null pointer loops 21x calling sub_080D0F08 (DMA helper) with stride. HOT: the 0x080A56B4 miss (+0x14, bridged x63) is early in the loop prologue. Called when the map scrolls (walking the farm). The bridge interprets the whole DMA-setup loop. The 0x080A56B4 miss is an interior PC, a resume/return inside the function the finder walk never reached. Covering the full function bounds as a resume_range."
+
+[[resume_range]]
+start = 0x080E10A8
+end   = 0x080E112C
+mode  = "thumb"
+note = "sub_080E10A8 (Cyphco src/sub_080E10A8.c): list/object teardown, 0x080E10A8-0x080E112C (0x84 bytes) — walks a list and for each entry walks 16-byte elements calling sub_08007C3C, sub_080079FC and sub_0800061C (free) per element, then installs vtable D_080E7954. HOTTEST: the 0x080E10F4 miss (+0x4C, bridged x127) is inside the element-walk loop. The bridge interprets the whole teardown loop including the per-element destructor calls — that is the hitch. The 0x080E10F4 miss is an interior PC, a resume/return inside the function the finder walk never reached. Covering the full function bounds as a resume_range."
+
+# --- REMAINING INTERIOR MISSES (address order) ---
+
+[[resume_range]]
+start = 0x08004C20
+end   = 0x08004C5C
+mode  = "thumb"
+note = "sub_08004C20 (Cyphco src/sub_08004C20.c): transfer/assignment helper, 0x08004C20-0x08004C5C (0x3C bytes) — calls D_08004584, moves a value, and if non-null calls virtual method vt[2] via sub_080D3960. The 0x08004C54 miss (+0x34, bridged x1) is near the end, after the virtual call. It is the function right before round-1's crash fix sub_08004C68 (0x08004C68), a different function — not covered by that hint. The 0x08004C54 miss is an interior PC, a resume/return inside the function the finder walk never reached. Covering the full function bounds as a resume_range."
+
+[[resume_range]]
+start = 0x08004F10
+end   = 0x080050DC
+mode  = "thumb"
+note = "sub_08004F10_format_text (Cyphco src/sub_08004F10_format_text.c): date/season text formatter, 0x08004F10-0x080050DC (0x1CC bytes) — builds the in-game date display (Day/Season, WritePaddedDecimalString, StringLength, memcpy) into the UI object. The 0x080050C8 miss (+0x1B8, bridged x1) is near the end. The 0x080050C8 miss is an interior PC, a resume/return inside the function the finder walk never reached. Covering the full function bounds as a resume_range."
+
+[[resume_range]]
+start = 0x08005A6C
+end   = 0x08005B4C
+mode  = "thumb"
+note = "sub_08005A6C (Cyphco src/sub_08005A6C.c): constructor-like setup, 0x08005A6C-0x08005B4C (0xE0 bytes) — installs vtable 0x080E5B00, sets up handles via sub_08050CD4, copies 13 words from D_080E8C30, optionally copies a string. The 0x08005B38 miss (+0xCC, bridged x3) is near the end. The 0x08005B38 miss is an interior PC, a resume/return inside the function the finder walk never reached. Covering the full function bounds as a resume_range."
+
+[[resume_range]]
+start = 0x08010038
+end   = 0x08010060
+mode  = "thumb"
+note = "sub_08010038 (Cyphco src/sub_08010038.c): small buffer/count helper, 0x08010038-0x08010060 (0x28 bytes) — walks bytes and adjusts a count. The 0x0801004C miss (+0x14, bridged x1) is in the middle. The 0x0801004C miss is an interior PC, a resume/return inside the function the finder walk never reached. Covering the full function bounds as a resume_range."
+
+[[resume_range]]
+start = 0x080A4F80
+end   = 0x080A56A0
+mode  = "thumb"
+note = "sub_080A4F80 (Cyphco src/sub_080A4F80.c): map scroll / background setup, 0x080A4F80-0x080A56A0 (0x720 bytes) — GetMapHeader, computes tile index from x/y, sets up 3 background layers (BG control regs, scroll offsets), runs per-map animation callbacks (switch on map id), uploads the palette via DMA. The 0x080A5670 miss (+0x6F0, bridged x1) is near the end. Runs when the camera moves (walking the farm). The switch is on a map id with direct animA calls, not a computed jump table — a single interior miss, not a jump-table pattern. The 0x080A5670 miss is an interior PC, a resume/return inside the function the finder walk never reached. Covering the full function bounds as a resume_range."
+
+[[resume_range]]
+start = 0x080D3C70
+end   = 0x080D3CAC
+mode  = "thumb"
+note = "sub_080D3C70 (Cyphco src/sub_080D3C70.c): constructor/helper, 0x080D3C70-0x080D3CAC (0x3C bytes) — allocates via sub_080005E8(8) + sub_08004B6C, stores into *dest, calls virtual method vt[2] via sub_080D3960. The 0x080D3C78 miss (+0x8, bridged x1) is just after the entry. It is the function right after round-1's sub_080D3C34 (0x080D3C34-0x080D3C70), a different function — round-1's range ends at 0x080D3C70 (exclusive) and does not cover this. A resume_range from the function start covers the entry as well, so no separate [[extra_func]] is needed. The 0x080D3C78 miss is an interior PC, a resume/return inside the function the finder walk never reached. Covering the full function bounds as a resume_range."
+
+[[resume_range]]
+start = 0x080D6C54
+end   = 0x080D6CA4
+mode  = "thumb"
+note = "sub_080D6C54 (Cyphco src/sub_080D6C54.c): small cleanup/destructor, 0x080D6C54-0x080D6CA4 (0x50 bytes) — empties two 8-byte-element lists and conditionally frees via sub_0800061C. The 0x080D6C58 miss (+0x4, bridged x1) is just after the entry. A resume_range from the function start covers the entry as well, so no separate [[extra_func]] is needed. The 0x080D6C58 miss is an interior PC, a resume/return inside the function the finder walk never reached. Covering the full function bounds as a resume_range."
+
+[[resume_range]]
+start = 0x080D6CA4
+end   = 0x080D6DD8
+mode  = "thumb"
+note = "sub_080D6CA4 (Cyphco src/sub_080D6CA4.c): constructor, 0x080D6CA4-0x080D6DD8 (0x134 bytes) — allocates a 0x554-byte object, sets vtable 0x080E5C44, calls sub_0801036C (loader), sub_0803F818, initializes fields, stores the object at 0x0300040C (IWRAM), calls virtual method vt[2] via sub_080D3960. The 0x080D6D8C miss (+0xE8, bridged x1) is deep inside, in the later initialization. The 0x080D6D8C miss is an interior PC, a resume/return inside the function the finder walk never reached. Covering the full function bounds as a resume_range."
+
+[[resume_range]]
+start = 0x080E1E74
+end   = 0x080E1FF8
+mode  = "thumb"
+note = "sub_080E1E74 (Cyphco src/sub_080E1E74.c): big UI-object destructor, 0x080E1E74-0x080E1FF8 (0x184 bytes) — tears down handler entries (destroyA/destroyB runs), walks element vectors, destroys the embedded object at +0x134, resets vtables, frees owned pointers, chains to base destructor sub_080086D0. The 0x080E1FAC miss (+0x138, bridged x1) is deep inside, in the later teardown. The 0x080E1FAC miss is an interior PC, a resume/return inside the function the finder walk never reached. Covering the full function bounds as a resume_range."
