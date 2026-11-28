@@ -246,3 +246,84 @@ start = 0x080D782C
 end   = 0x080D7868
 mode  = "thumb"
 note  = "func_080D782C (asm/code_linkonce.s): 0x080D782C-0x080D7868 (0x3C bytes). Interior miss at 0x080D783C was bridged x416, an IRQ resume."
+
+# Batch hints — FoMT name-screen crash (crash.log, run 3, 2026-11-28).
+# Ray's play session crashed at the new-game name-entry screen (3 runs, same
+# abort) and reported choppy/slow FPS. All 11 miss PCs from run 3 are covered
+# here as 10 hints (0x0804F242 + 0x0804F24C share one range). None of the 11
+# PCs is covered by the current variants/fomt/game.toml on main (verified
+# 2026-11-28 against the 248-line file on main). Append to
+# variants/fomt/game.toml. Do NOT claim FULLY_STATIC until the strict confirm
+# passes after merge (GBARECOMP_STRICT_STATIC=1, expect FULLY_STATIC).
+
+# --- THE CRASH FIX ---
+# sub_08004C68 is the SELF-HEAL bridge that never returns (see TRIAGE.md).
+# Rooting its entry removes the bridge entirely.
+
+[[extra_func]]
+addr = 0x08004C68
+mode = "thumb"
+note = "sub_08004C68 (Cyphco src/sub_08004C68.c): thin constructor wrapper, 0x08004C68-0x08004C7C (0x14 bytes) — installs vtable D_080E5AD4 into *p, calls sub_08000800, returns. THE NAME-SCREEN CRASH: the SELF-HEAL bridge for this entry never returned to stop_pc 0x08000848; it interpreted the whole game loop until the 200M-instruction cap, aborting in the BIOS IRQ-dispatcher region at 0x00000370 (VBlank IRQs self-deliver via runtime_tick into the recompiled BIOS while the bridge runs). Its caller sub_08000840 is translated (it executed the bl at 0x08000844), but the finder never discovered the callee — likely walk truncation in sub_08000840. Rooting the entry removes the bridge entirely. Entry, not interior, so no resume_range (static_resume_all covers interior PCs once rooted)."
+
+# --- REMAINING INTERIOR MISSES (address order) ---
+
+[[resume_range]]
+start = 0x0800370C
+end   = 0x08003730
+mode  = "thumb"
+note = "sub_0800370C (Cyphco src/sub_0800370C.c): constructor, 0x0800370C-0x08003730 (0x24 bytes) — installs vtable 0x080E5A64, calls sub_080005E8(0x6D34), stores sub_08000928() at [arg0+4]. The 0x0800371C miss is an interior PC (+0x10), a resume/return inside the function the finder walk never reached (walk stops at the first unconditional branch). Covering the full function bounds as a resume_range."
+
+[[resume_range]]
+start = 0x0804EF10
+end   = 0x0804EF34
+mode  = "thumb"
+note = "sub_0804EF10 (Cyphco src/sub_0804EF10.c): thin wrapper forwarding struct fields to sub_0804EA08, 0x0804EF10-0x0804EF34 (0x24 bytes), returns 0. The 0x0804EF20 miss is an interior PC (+0x10), a resume/return inside the function the finder walk never reached. Covering the full function bounds as a resume_range."
+
+[[resume_range]]
+start = 0x0804F18C
+end   = 0x0804F1B0
+mode  = "thumb"
+note = "sub_0804F18C (Cyphco src/sub_0804F18C.c): small predicate on bytes at +4/+8, 0x0804F18C-0x0804F1B0 (0x24 bytes), returns 0/1. The 0x0804F19C miss is an interior PC (+0x10), a resume/return inside the function the finder walk never reached. Covering the full function bounds as a resume_range."
+
+[[resume_range]]
+start = 0x0804F1B0
+end   = 0x0804F29C
+mode  = "thumb"
+note = "sub_0804F1B0 (Cyphco src/sub_0804F1B0.c): sprite/object setup, 0x0804F1B0-0x0804F29C (0xEC bytes) — fills VRAM with a pattern, calls sub_08051334 twice, sub_080D3798 (CpuSet/DMA) for the palette, InitArchiveIndex(entry, 0x8728264), sub_0805E7A4; returns 0. The 0x0804F242 (+0x92) and 0x0804F24C (+0x9C) misses are interior PCs, resume/return points inside the function the finder walk never reached. One resume_range covering the full function bounds covers both."
+
+[[resume_range]]
+start = 0x080D3BC4
+end   = 0x080D3C0C
+mode  = "thumb"
+note = "StringLength (Cyphco src/StringLength.c): strlen with a word-at-a-time fast path, 0x080D3BC4-0x080D3C0C (0x48 bytes). The 0x080D3BE8 miss is an interior PC (+0x24), a resume/return inside the function the finder walk never reached. Covering the full function bounds as a resume_range."
+
+[[resume_range]]
+start = 0x080D3C34
+end   = 0x080D3C70
+mode  = "thumb"
+note = "sub_080D3C34 (Cyphco src/sub_080D3C34.c): constructor/helper, 0x080D3C34-0x080D3C70 (0x3C bytes) — allocates via sub_080005E8(4) + sub_08004C5C, stores into *dest, calls virtual method vt[2] via sub_080D3960 if non-null. The 0x080D3C6C miss is an interior PC (+0x38), a resume/return inside the function the finder walk never reached. Covering the full function bounds as a resume_range."
+
+# --- FPS FIXES ---
+# The 0x080E0F48 / 0x080E0F94 cluster is the choppy FPS (see TRIAGE.md):
+# hot helpers interpreted hundreds of times instead of running as
+# recompiled code. The entry gets [[extra_func]]; the interior 0x080E0F90
+# gets its own [[resume_range]] alongside it, following the RealClear64byte
+# pattern already in game.toml (extra_func + resume_range for one function),
+# because rooting the entry alone did not cover an interior PC there.
+
+[[extra_func]]
+addr = 0x080E0F48
+mode = "thumb"
+note = "sub_080E0F48 (Cyphco src/sub_080E0F48.c): integer-to-string (itoa-like) helper, 0x080E0F48-0x080E0F94 (0x4C bytes) — converts a u32 value to decimal ASCII in out, calls sub_080D0F26 (division helper, since ARM has no divide). THE FPS CAUSE: entry miss count 307 in the crash session — the hottest function in the log, interpreted instead of running as recompiled code. Finder never discovered it: no direct callers in the translated set, reached only via a path the static finder cannot follow. Entry, so [[extra_func]]; the interior 0x080E0F90 miss gets its own [[resume_range]] below (RealClear64byte pattern)."
+
+[[resume_range]]
+start = 0x080E0F48
+end   = 0x080E0F94
+mode  = "thumb"
+note = "sub_080E0F48 (Cyphco src/sub_080E0F48.c), 0x080E0F48-0x080E0F94: interior coverage for the 0x080E0F90 miss (+0x48, count 273 — reached on ~89% of calls, so it is on the normal execution path, not a rare IRQ-resume). Added alongside the [[extra_func]] above, following the RealClear64byte pattern in this file (extra_func + resume_range for the same function), because rooting the entry alone did not cover an interior PC there."
+
+[[resume_range]]
+start = 0x080E0F94
+end   = 0x080E0FDC
+mode  = "thumb"
+note = "sub_080E0F94 (Cyphco src/sub_080E0F94.c): array/list processing, 0x080E0F94-0x080E0FDC (0x48 bytes) — reads a count, calls sub_080090A8 on a range, iterates 16-byte elements. FPS: the 0x080E0FCE miss (+0x3A, count 84) is an interior PC, a resume/return inside the function the finder walk never reached. Its entry is NOT in the miss list (already translated), so this is a pure interior-resume case — a resume_range covering the full function bounds is the fix."
